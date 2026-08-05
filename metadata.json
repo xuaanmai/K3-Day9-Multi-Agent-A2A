@@ -1,8 +1,11 @@
 {
-  "model_name": "meta-llama/Llama-3.1-8B-Instruct",
-  "parameter_size": "8B",
+  "model_name": "qwen2.5:0.5b",
+  "parameter_size": "0.49B",
   "framework": "custom-multi-agent-a2a",
-  "runtime": "Python 3.11",
-  "provider": "HuggingFace InferenceClient",
+  "runtime": "Python 3.11 + Ollama local",
+  "provider": "Ollama",
+  "agent_count": 6,
+  "shared_model": true,
+  "deterministic_financial_calculation": true,
   "total_cases_processed": 50
 }

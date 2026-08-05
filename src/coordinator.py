@@ -1,14 +1,25 @@
-from typing import Any, Dict, List, Optional
+"""Single official coordinator for deterministic tools plus Ollama reviews."""
 
-from src.data_repository import DataRepository
-from src.llm_client import LLMClient
-from src.schemas import CaseContext, CaseInput
-from src.trace_writer import TraceWriter
+from typing import Any, Dict, Optional
+
 from src.agents.delivery_agent import DeliveryAgent
 from src.agents.order_seller_agent import OrderSellerAgent
 from src.agents.payment_agent import PaymentAgent
 from src.agents.policy_agent import PolicyAgent
 from src.agents.verifier_agent import VerifierAgent
+from src.data_repository import DataRepository
+from src.llm_client import LLMClient, PARAMETER_SIZE, PROVIDER
+from src.schemas import CaseContext, CaseInput
+from src.trace_writer import TraceWriter
+
+
+AGENT_ACTIONS = {
+    "OrderSellerAgent": "analyze_order_items",
+    "PaymentAgent": "analyze_payments",
+    "DeliveryAgent": "analyze_delivery",
+    "PolicyAgent": "evaluate_policy",
+    "VerifierAgent": "verify_output",
+}
 
 
 class Coordinator:
@@ -26,56 +37,92 @@ class Coordinator:
             PaymentAgent(),
             DeliveryAgent(),
             PolicyAgent(),
-            VerifierAgent(),
+            VerifierAgent(data_repository=self.data_repository),
         ]
 
-    def _build_case_input(self, case_input: Any) -> CaseInput:
+    @staticmethod
+    def _build_case_input(case_input: Any) -> CaseInput:
         if isinstance(case_input, CaseInput):
             return case_input
         if isinstance(case_input, dict):
             return CaseInput(**case_input)
         raise TypeError("case_input must be a dict or CaseInput instance")
 
+    def _trace(
+        self,
+        case_id: str,
+        agent: str,
+        action: str,
+        details: Dict[str, Any],
+        llm_result: Dict[str, Any],
+    ) -> None:
+        self.trace_writer.write_event(
+            case_id=case_id,
+            agent=agent,
+            model=self.llm_client.model,
+            parameter_size=PARAMETER_SIZE,
+            provider=PROVIDER,
+            action=action,
+            details=details,
+            llm_result=llm_result,
+        )
+
     def run(self, case_input: Any) -> Dict[str, Any]:
         case = self._build_case_input(case_input)
         order_id = case.customer_request.claimed_order_id
-
         raw_data: Dict[str, Any] = {
             "order_row": self.data_repository.get_order(order_id),
             "items": self.data_repository.get_order_items(order_id),
             "payments": self.data_repository.get_order_payments(order_id),
         }
-
         context = CaseContext(case_input=case, raw_data=raw_data)
-        trace: Dict[str, Any] = {
+
+        coordinator_facts = {
             "case_id": case.case_id,
             "order_id": order_id,
-            "raw_data_counts": {
-                "order_row": 1 if raw_data["order_row"] else 0,
-                "items": len(raw_data["items"]),
-                "payments": len(raw_data["payments"]),
-            },
-            "agent_results": [],
+            "policy_version": case.policy_version,
+            "task": "Route verified order, payment, delivery, policy and verification work.",
         }
+        coordinator_review = self.llm_client.review("CoordinatorAgent", coordinator_facts)
+        self._trace(
+            case.case_id,
+            "CoordinatorAgent",
+            "receive_case",
+            coordinator_facts,
+            coordinator_review,
+        )
 
         last_result: Optional[Dict[str, Any]] = None
         for agent in self.agents:
             result = agent.process(context)
-            trace["agent_results"].append(
-                {
-                    "agent": agent.name,
-                    "success": result.success,
-                    "data": result.data,
-                    "error_message": result.error_message,
+            review_facts = {
+                "case_id": case.case_id,
+                "order_id": order_id,
+                "success": result.success,
+                "result": result.data,
+                "error_message": result.error_message,
+            }
+            llm_review = self.llm_client.review(agent.name, review_facts)
+            trace_details = result.data
+            if agent.name == "VerifierAgent":
+                trace_details = {
+                    "case_id": case.case_id,
+                    "status": "passed" if result.success else "failed",
+                    "error_count": len(context.verification_errors),
                 }
+            self._trace(
+                case.case_id,
+                agent.name,
+                AGENT_ACTIONS[agent.name],
+                trace_details,
+                llm_review,
             )
+            if not result.success:
+                raise RuntimeError(
+                    f"{agent.name} rejected {case.case_id}: {result.error_message}"
+                )
             last_result = result.data
 
-        self.trace_writer.write(trace)
-
-        output = {"case_id": case.case_id}
-        if last_result is not None:
-            output.update(last_result)
-        if context.verification_errors:
-            output["verification_errors"] = context.verification_errors
-        return output
+        if last_result is None:
+            raise RuntimeError(f"No output produced for {case.case_id}")
+        return last_result

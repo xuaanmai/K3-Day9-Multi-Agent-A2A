@@ -62,6 +62,7 @@ class PaymentAgent(BaseAgent):
             difference_brl=float(difference),
             payment_matches=difference <= MATCH_TOLERANCE,
             is_split_payment=payment_row_count >= 2,
+            evidence_ids=[f"payment:{payment_id}" for payment_id in payment_ids],
         )
         context.payment = analysis
 
