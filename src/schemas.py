@@ -1,84 +1,75 @@
+"""Minimal shared contracts required by the deterministic Payment Agent.
+
+The repository does not yet contain the team-owned Pydantic schemas.  These
+dataclasses preserve the existing agent interface without introducing schemas
+for the other domain agents.
+"""
+
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-
-from pydantic import BaseModel, Field
-
-
-class BaseAgent:
-    def __init__(self, name: str):
-        self.name = name
+from dataclasses import asdict, dataclass, field
+from typing import Any, Optional
 
 
-class AgentResult(BaseModel):
-    agent_name: str
-    success: bool
-    data: Dict[str, Any] = Field(default_factory=dict)
-    error_message: Optional[str] = None
-
-
-class CustomerRequest(BaseModel):
+@dataclass
+class CustomerRequest:
     language: str
     message: str
     claimed_order_id: str
 
 
-class CaseInput(BaseModel):
+@dataclass
+class CaseInput:
     case_id: str
     opened_at: str
     customer_request: CustomerRequest
     policy_version: str = "EC_POLICY_V1"
 
 
-class CaseContext(BaseModel):
-    case_input: CaseInput
-    raw_data: Dict[str, Any] = Field(default_factory=dict)
-    order_seller: Optional[OrderSellerAnalysis] = None
-    payment: Optional[PaymentAnalysis] = None
-    delivery: Optional[DeliveryAnalysis] = None
-    policy: Optional[PolicyResolution] = None
-    verification_errors: List[str] = Field(default_factory=list)
+@dataclass
+class AgentResult:
+    agent_name: str
+    success: bool
+    data: dict[str, Any] = field(default_factory=dict)
+    error_message: Optional[str] = None
 
 
-class OrderSellerAnalysis(BaseModel):
+class BaseAgent:
+    """Common interface already used by the repository's agents."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def process(self, context: "CaseContext") -> AgentResult:
+        raise NotImplementedError
+
+
+@dataclass
+class Payment:
+    payment_sequential: int
+    payment_type: str
+    payment_value_brl: float
+
+
+@dataclass
+class PaymentAnalysis:
     order_id: str
-    order_status: str = "unknown"
-    seller_ids: List[str] = Field(default_factory=list)
-    item_ids: List[str] = Field(default_factory=list)
-    shipping_limit_dates: List[str] = Field(default_factory=list)
-    item_total_brl: float = 0.0
-    freight_total_brl: float = 0.0
-    is_seller_late: bool = False
-    evidence_ids: List[str] = Field(default_factory=list)
-
-
-class PaymentAnalysis(BaseModel):
-    order_id: str
-    payment_ids: List[str] = Field(default_factory=list)
+    payments: list[Payment] = field(default_factory=list)
+    payment_ids: list[str] = field(default_factory=list)
+    payment_row_count: int = 0
     payment_total_brl: float = 0.0
-    payment_count: int = 0
+    expected_total_brl: float = 0.0
+    difference_brl: float = 0.0
+    payment_matches: bool = True
     is_split_payment: bool = False
-    reconciled_with_items: bool = False
-    payment_diff_brl: float = 0.0
-    evidence_ids: List[str] = Field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
-class DeliveryAnalysis(BaseModel):
-    order_id: str
-    order_delivered_customer_date: Optional[str] = None
-    order_estimated_delivery_date: Optional[str] = None
-    order_delivered_carrier_date: Optional[str] = None
-    is_delivered_late: bool = False
-    is_carrier_late_handoff: bool = False
-    evidence_ids: List[str] = Field(default_factory=list)
-
-
-class PolicyResolution(BaseModel):
-    primary_issue: str
-    case_status: str
-    confidence: float
-    ranked_causes: List[Dict[str, Any]] = Field(default_factory=list)
-    responsible_parties: List[Dict[str, Any]] = Field(default_factory=list)
-    recommended_refund_brl: float = 0.0
-    resolution_actions: List[str] = Field(default_factory=list)
-    evidence_ids: List[str] = Field(default_factory=list)
+@dataclass
+class CaseContext:
+    case_input: CaseInput
+    raw_data: dict[str, Any] = field(default_factory=dict)
+    order_seller: Any = None
+    payment: Optional[PaymentAnalysis] = None
