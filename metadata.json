@@ -1,6 +1,8 @@
 {
-  "model": "gemini-2.5-flash",
-  "parameter_size": "<10B",
-  "framework": "Custom Multi-Agent Framework (Python)",
-  "runtime": "Python 3.10+"
+  "model_name": "meta-llama/Llama-3.1-8B-Instruct",
+  "parameter_size": "8B",
+  "framework": "custom-multi-agent-a2a",
+  "runtime": "Python 3.11",
+  "provider": "HuggingFace InferenceClient",
+  "total_cases_processed": 50
 }
