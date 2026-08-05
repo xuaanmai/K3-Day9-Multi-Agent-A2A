@@ -1,0 +1,6 @@
+{
+  "model": "gemini-2.5-flash",
+  "parameter_size": "<10B",
+  "framework": "Custom Multi-Agent Framework (Python)",
+  "runtime": "Python 3.10+"
+}
