@@ -39,12 +39,12 @@ flowchart TD
 
 | Tên Agent | Module File | Vai trò & Quyền hạn | Input nhận vào | Output bàn giao |
 | :--- | :--- | :--- | :--- | :--- |
-| **Coordinator Agent** | `src/coordinator.py` | Điều phối toàn bộ pipeline, kiểm soát state `CaseContext`, quản lý log trace và khởi tạo luồng agent. | Raw `case` JSON từ `input/` | Struct output JSON cho case hoặc báo lỗi |
+| **Coordinator Agent** | `src/coordinator.py` / `src/agents.py` | Điều phối toàn bộ pipeline, kiểm soát state `CaseContext`, quản lý log trace và khởi tạo luồng agent. | Raw `case` JSON từ `input/` | Struct output JSON cho case |
 | **Order & Seller Agent** | `src/agents/order_seller_agent.py` | Tra cứu trạng thái đơn hàng (`orders`), các mặt hàng (`order_items`), người bán (`sellers`), tính tổng tiền hàng, tiền vận chuyển và kiểm tra mốc `shipping_limit_date`. | `CaseContext` | `OrderSellerAnalysis` bổ sung vào Context |
 | **Payment Agent** | `src/agents/payment_agent.py` | Đọc bảng giao dịch thanh toán (`order_payments`), đối soát thanh toán nhiều đợt (split payment) với tổng đơn hàng trong sai số $\le 0.10$ BRL. | `CaseContext` (có `OrderSellerAnalysis`) | `PaymentAnalysis` bổ sung vào Context |
 | **Delivery Agent** | `src/agents/delivery_agent.py` | So sánh thời gian giao thực tế (`order_delivered_customer_date`) với thời hạn ước tính (`order_estimated_delivery_date`) và thời gian carrier nhận hàng. | `CaseContext` | `DeliveryAnalysis` bổ sung vào Context |
 | **Policy Agent** | `src/agents/policy_agent.py` | Áp dụng chính sách `EC_POLICY_V1` theo thứ tự ưu tiên nghiệp vụ, xác định `primary_issue`, bên chịu trách nhiệm, khoản hoàn đề xuất và danh sách `evidence_ids`. | `CaseContext` với đầy đủ kết quả từ 3 domain agents | `PolicyResolution` bổ sung vào Context |
-| **Verifier Agent** | `src/agents/verifier_agent.py` | Kiểm tra tính hợp lệ của tất cả entity ID, số lượng giới hạn (tối đa 5 IDs/entity, 10 evidence IDs), format evidence, tính nhất quán tài chính và đóng gói JSON cuối cùng. | `CaseContext` có draft resolution từ Policy Agent | Struct output JSON đạt chuẩn hoặc thông báo lỗi audit |
+| **Verifier Agent** | `src/agents/verifier_agent.py` | Kiểm tra tính hợp lệ của tất cả entity ID, số lượng giới hạn (tối đa 5 IDs/entity, 10 evidence IDs), format evidence, tính nhất quán tài chính và đóng gói JSON cuối cùng. | `CaseContext` có draft resolution từ Policy Agent | Struct output JSON đạt chuẩn |
 
 ---
 
