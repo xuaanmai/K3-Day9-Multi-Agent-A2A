@@ -1,0 +1,12 @@
+order_id,payment_sequential,payment_type,payment_installments,payment_value
+00010242fe8c5a6d1ba2dd792cb16214,1,credit_card,2,72.19
+0016dfedd97fc2950e388d2971d718c7,1,credit_card,5,52.63
+0016dfedd97fc2950e388d2971d718c7,2,voucher,1,17.92
+009ac365164f8e06f59d18a08045f6c4,1,credit_card,1,0.88
+009ac365164f8e06f59d18a08045f6c4,2,voucher,1,4.50
+009ac365164f8e06f59d18a08045f6c4,3,voucher,1,8.25
+009ac365164f8e06f59d18a08045f6c4,4,voucher,1,5.45
+009ac365164f8e06f59d18a08045f6c4,5,voucher,1,8.75
+009ac365164f8e06f59d18a08045f6c4,6,voucher,1,4.17
+033ccfbdfc4d29677b7e1e6df3a82820,1,credit_card,3,30.82
+033ccfbdfc4d29677b7e1e6df3a82820,2,credit_card,3,38.44
