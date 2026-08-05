@@ -33,9 +33,20 @@ ACTION_REFUND_FREIGHT = "refund_freight"
 ACTION_EXPLAIN_VALID_SPLIT_PAYMENT = "explain_valid_split_payment"
 ACTION_REJECT_LATE_REFUND = "reject_late_refund"
 
-# Policy Evidence Formatter
+# Evidence Formatters
+def fmt_order_evidence(order_id: str) -> str:
+    return f"order:{order_id}"
+
+def fmt_item_evidence(order_id: str, item_id: Any) -> str:
+    return f"item:{order_id}:{item_id}"
+
+def fmt_payment_evidence(order_id: str, sequence: Any) -> str:
+    return f"payment:{order_id}:{sequence}"
+
+def fmt_seller_evidence(seller_id: str) -> str:
+    return f"seller:{seller_id}"
+
 def fmt_policy_evidence(cause_code: str) -> str:
-    """Returns standardized evidence ID for policy rules."""
     return f"policy:{cause_code}"
 
 

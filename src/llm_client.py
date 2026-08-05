@@ -50,3 +50,13 @@ class LLMClient:
             return response.choices[0].message.content
         except Exception as e:
             return f"LLM_ERROR: {str(e)}"
+
+    def generate(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
+        """Backward compatible generate method."""
+        res_text = self.chat_completion([{"role": "user", "content": prompt}])
+        return {
+            "model": self.model,
+            "prompt": prompt,
+            "response": res_text,
+            "metadata": kwargs,
+        }
